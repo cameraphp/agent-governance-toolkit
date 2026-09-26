@@ -18,6 +18,16 @@ def _build_contextual_identifier_pattern(cue: str, min_length: int, max_length: 
     )
 
 
+# Canonical MRN raw regex shared by the credential redactor and data-layer PHI
+# classification so both components enforce identical cue, separator, and value
+# semantics for medical record numbers.
+MEDICAL_RECORD_NUMBER_REGEX = _build_contextual_identifier_pattern(
+    r"mrn|medical[\s_-]*record",
+    6,
+    12,
+)
+
+
 def is_valid_npi(npi: str) -> bool:
     """Check if a 10-digit string is a valid NPI using the Luhn algorithm.
 
@@ -62,7 +72,7 @@ HIPAA_PHI_RAW_PATTERNS = (
     # treated as PHI and grouped with patient-linked healthcare identifiers.
     (
         "Medical Record Number (MRN)",
-        _build_contextual_identifier_pattern(r"mrn|medical[\s_-]*record", 6, 12),
+        MEDICAL_RECORD_NUMBER_REGEX,
     ),
     # NPIs identify healthcare providers, are publicly available via the NPPES
     # registry, and are retained for healthcare identifier detection but are

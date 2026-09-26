@@ -5,6 +5,7 @@
 import pytest
 
 from agent_os.credential_redactor import CredentialMatch, CredentialRedactor
+from agent_os.policies.data_classification import detect_phi
 
 PHI_NAMES = {
     "Medical Record Number (MRN)",
@@ -101,6 +102,19 @@ def test_member_identification_uses_full_health_plan_cue():
     assert _hipaa_matches("member identification: ABC12345678") == [
         ("Health Plan ID", "member identification: ABC12345678")
     ]
+
+
+@pytest.mark.parametrize(
+    ("text", "expected_match"),
+    [
+        ("MRN: ABC123456", "MRN: ABC123456"),
+        ("medical record: ABC123456", "medical record: ABC123456"),
+        ("Patient MRN: 12345678", "MRN: 12345678"),
+    ],
+)
+def test_data_classification_and_redactor_agree_on_valid_mrn_detection(text, expected_match):
+    assert "MRN" in detect_phi(text)
+    assert _hipaa_matches(text) == [("Medical Record Number (MRN)", expected_match)]
 
 
 @pytest.mark.parametrize(
