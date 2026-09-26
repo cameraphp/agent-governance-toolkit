@@ -1297,3 +1297,6 @@ hpid
 luhn
 NPPES
 xmrn
+
+# International Traffic in Arms Regulations
+ITAR
