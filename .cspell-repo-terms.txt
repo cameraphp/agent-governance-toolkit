@@ -1295,4 +1295,5 @@ schemars
 # --- Healthcare identifier terms used in HIPAA pattern matching and tests ---
 hpid
 luhn
+NPPES
 xmrn
