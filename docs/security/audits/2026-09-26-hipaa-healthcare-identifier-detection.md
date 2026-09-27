@@ -1,3 +1,9 @@
+---
+title: "Security audit: HIPAA healthcare identifier detection"
+last_reviewed: 2026-09-26
+owner: cameraphp
+---
+
 # Security Audit: HIPAA Healthcare Identifier Detection
 
 **Date:** 2026-09-26  
