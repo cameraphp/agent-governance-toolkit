@@ -274,6 +274,9 @@ class TestDetectPHI:
             "MRN: ABC123456",
             "medical record: ABC123456",
             "Patient MRN: 12345678",
+            "MRN: 1a2b3c",
+            "mrn: A12345",
+            "medical record 123456",
         ],
     )
     def test_detect_phi_uses_canonical_mrn_definition(self, text: str) -> None:
@@ -285,6 +288,15 @@ class TestDetectPHI:
             "MRN: patient",
             "We shipped build ABC12345678 to staging.",
             "MRN: A123456789012345",
+            "MRN: ſ12345",
+            "MRN: K12345",
+            "MRN: İ12345",
+            "MRN: 123456²",
+            "MRN: 123456\u0301",
+            "MRN: 123456-7",
+            "MRN: 123456_more",
+            "MRN: A12345_more",
+            "medical\u00a0record 123456",
         ],
     )
     def test_detect_phi_rejects_invalid_canonical_mrn_cases(self, text: str) -> None:
@@ -296,9 +308,21 @@ class TestDetectPHI:
             "MRN: ABC123456",
             "medical record: ABC123456",
             "Patient MRN: 12345678",
+            "MRN: 1a2b3c",
+            "mrn: A12345",
+            "medical record 123456",
             "MRN: patient",
             "We shipped build ABC12345678 to staging.",
             "MRN: A123456789012345",
+            "MRN: ſ12345",
+            "MRN: K12345",
+            "MRN: İ12345",
+            "MRN: 123456²",
+            "MRN: 123456\u0301",
+            "MRN: 123456-7",
+            "MRN: 123456_more",
+            "MRN: A12345_more",
+            "medical\u00a0record 123456",
         ],
     )
     def test_detect_phi_and_credential_redactor_share_mrn_semantics(self, text: str) -> None:

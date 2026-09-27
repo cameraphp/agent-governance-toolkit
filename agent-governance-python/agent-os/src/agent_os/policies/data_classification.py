@@ -18,7 +18,10 @@ from enum import IntEnum
 
 from pydantic import BaseModel, Field
 
-from agent_os.hipaa_patterns import MEDICAL_RECORD_NUMBER_REGEX
+from agent_os.hipaa_patterns import (
+    MEDICAL_RECORD_NUMBER_REGEX,
+    validate_contextual_identifier_match,
+)
 
 
 class DataClassification(IntEnum):
@@ -208,7 +211,7 @@ def detect_pii(text: str) -> list[str]:
 def detect_phi(text: str) -> list[str]:
     """Detect PHI patterns (medical record numbers, diagnosis codes)."""
     findings: list[str] = []
-    if _MRN_RE.search(text):
+    if any(validate_contextual_identifier_match(match) for match in _MRN_RE.finditer(text)):
         findings.append("MRN")
     if _ICD_RE.search(text):
         findings.append("ICD-code")

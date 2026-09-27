@@ -3,18 +3,52 @@
 """HIPAA PHI patterns for the credential redactor."""
 
 import re
+import unicodedata
 
-_IDENTIFIER_VALUE_SEPARATOR = r"[ \t\r\n_#:-]+"
+_IDENTIFIER_SEPARATOR_CHARS = r"[ \t\r\n_#:-]"
+_IDENTIFIER_VALUE_GROUP = "value"
 
 
 def _build_contextual_identifier_pattern(cue: str, min_length: int, max_length: int) -> str:
-    """Build an identifier pattern with a strict separator for letter-prefixed values."""
-    digits_only = rf"\d{{{min_length},{max_length}}}"
-    alphanumeric = rf"[A-Z](?=[A-Z0-9]*\d)[A-Z0-9]{{{min_length - 1},{max_length - 1}}}"
+    """Build an ASCII-only contextual identifier pattern."""
     return (
-        rf"(?i)(?<![A-Za-z0-9])(?:{cue})"
-        rf"(?:{_IDENTIFIER_VALUE_SEPARATOR}(?:{alphanumeric}|{digits_only})|{digits_only})"
+        rf"(?ai)(?<![A-Za-z0-9])(?:{cue})"
+        rf"{_IDENTIFIER_SEPARATOR_CHARS}*(?P<{_IDENTIFIER_VALUE_GROUP}>[a-z0-9]{{{min_length},{max_length}}})"
         rf"(?![A-Za-z0-9])"
+    )
+
+
+def _is_identifier_separator(character: str) -> bool:
+    """Return whether *character* is an accepted cue/value separator."""
+    return character in " \t\r\n_#:-"
+
+
+def _has_ascii_digit(value: str) -> bool:
+    """Return whether *value* contains at least one ASCII digit."""
+    return any("0" <= character <= "9" for character in value)
+
+
+def _has_disallowed_identifier_continuation(text: str, end: int) -> bool:
+    """Reject Unicode continuation characters immediately after a matched value."""
+    if end >= len(text):
+        return False
+    next_character = text[end]
+    if next_character in "_-":
+        return True
+    return unicodedata.category(next_character).startswith(("L", "M", "N"))
+
+
+def validate_contextual_identifier_match(match: re.Match[str]) -> bool:
+    """Validate shared post-match identifier rules for MRN and health-plan IDs."""
+    value = match.group(_IDENTIFIER_VALUE_GROUP)
+    if not _has_ascii_digit(value):
+        return False
+    if not value[0].isdigit():
+        value_start = match.start(_IDENTIFIER_VALUE_GROUP)
+        if value_start == 0 or not _is_identifier_separator(match.string[value_start - 1]):
+            return False
+    return not _has_disallowed_identifier_continuation(
+        match.string, match.end(_IDENTIFIER_VALUE_GROUP)
     )
 
 
@@ -54,12 +88,9 @@ def is_valid_npi(npi: str) -> bool:
 
 
 def validate_npi_match(match: re.Match[str]) -> bool:
-    """Validator for NPI matches that extracts digits and checks Luhn."""
-    # Extract just the digits from the match
-    text = match.group(0)
-    digits = "".join(re.findall(r"\d", text))
-    # We expect exactly 10 digits for a valid NPI
-    if len(digits) != 10:
+    """Validator for NPI matches that enforces shared boundaries and Luhn."""
+    digits = match.group(_IDENTIFIER_VALUE_GROUP)
+    if _has_disallowed_identifier_continuation(match.string, match.end(_IDENTIFIER_VALUE_GROUP)):
         return False
     return is_valid_npi(digits)
 
@@ -73,13 +104,15 @@ HIPAA_PHI_RAW_PATTERNS = (
     (
         "Medical Record Number (MRN)",
         MEDICAL_RECORD_NUMBER_REGEX,
+        validate_contextual_identifier_match,
     ),
     # NPIs identify healthcare providers, are publicly available via the NPPES
     # registry, and are retained for healthcare identifier detection but are
     # not treated as PHI by the redactor collections.
     (
         "National Provider Identifier (NPI)",
-        r"(?i)(?<![0-9])(?:npi|provider[\s_-]*id)[\s#:-]*(\d{10})(?![0-9])",
+        rf"(?ai)(?<![A-Za-z0-9])(?:npi|provider[\s_-]*id){_IDENTIFIER_SEPARATOR_CHARS}*"
+        rf"(?P<{_IDENTIFIER_VALUE_GROUP}>[0-9]{{10}})(?![A-Za-z0-9])",
         validate_npi_match,
     ),
     # Health-plan or member identifiers describe a patient's insurance
@@ -87,9 +120,10 @@ HIPAA_PHI_RAW_PATTERNS = (
     (
         "Health Plan ID",
         _build_contextual_identifier_pattern(
-            r"hpid|health[\s_-]*plan(?:[\s_-]*id)?|member[\s_-]*(?:id|identification)|policy[\s_-]*id",
+            r"hpid|health[\s_-]*plan(?:[\s_-]*id)?|member[\s_-]*(?:identification|id)|policy[\s_-]*id",
             8,
             15,
         ),
+        validate_contextual_identifier_match,
     ),
 )

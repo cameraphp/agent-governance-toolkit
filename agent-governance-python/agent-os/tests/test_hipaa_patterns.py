@@ -58,9 +58,14 @@ def test_healthcare_pattern_collections_are_separate():
         ("medical_record: Z987654", "Medical Record Number (MRN)", "medical_record: Z987654"),
         ("MRN-123456", "Medical Record Number (MRN)", "MRN-123456"),
         ("MRN: ABC123456", "Medical Record Number (MRN)", "MRN: ABC123456"),
+        ("mrn: A12345", "Medical Record Number (MRN)", "mrn: A12345"),
+        ("medical record 123456", "Medical Record Number (MRN)", "medical record 123456"),
+        ("MRN: 1a2b3c", "Medical Record Number (MRN)", "MRN: 1a2b3c"),
         # NPI cases (1234567893 is a valid NPI)
         ("Provider NPI: 1234567893", "National Provider Identifier (NPI)", "NPI: 1234567893"),
+        ("NPI1234567893", "National Provider Identifier (NPI)", "NPI1234567893"),
         ("npi 1234567893", "National Provider Identifier (NPI)", "npi 1234567893"),
+        ("NPI_1234567893", "National Provider Identifier (NPI)", "NPI_1234567893"),
         ("provider id 1234567893", "National Provider Identifier (NPI)", "provider id 1234567893"),
         (
             "Provider ID: 1234567893",
@@ -128,6 +133,18 @@ def test_data_classification_and_redactor_agree_on_valid_mrn_detection(text, exp
 @pytest.mark.parametrize(
     ("text", "expected_match"),
     [
+        ("prefixNPI: 1234567893", []),
+        ("NPI: 1234567893X", []),
+        ("NPI_1234567893", [("National Provider Identifier (NPI)", "NPI_1234567893")]),
+    ],
+)
+def test_npi_boundaries_and_separators_follow_port_behavior(text, expected_match):
+    assert _hipaa_matches(text) == expected_match
+
+
+@pytest.mark.parametrize(
+    ("text", "expected_match"),
+    [
         ("MRN: ABC123456", ("Medical Record Number (MRN)", "MRN: ABC123456")),
         ("NPI: 1234567893", ("National Provider Identifier (NPI)", "NPI: 1234567893")),
         ("member id: ABC12345678", ("Health Plan ID", "member id: ABC12345678")),
@@ -186,6 +203,18 @@ def test_find_pii_matches_preserves_healthcare_then_pii_ordering():
         "MRN: A123456789012345",  # Too long
         "MRN: patient 123456",
         "MRN: patient",
+        "MRN: ſ12345",
+        "MRN: K12345",
+        "MRN: İ12345",
+        "MRN: 123456²",
+        "MRN: 123456\u0301",
+        "MRN: 123456-7",
+        "MRN: 123456_more",
+        "MRN: A12345_more",
+        "NPI: ١٢٣٤٥٦٧٨٩٣",
+        "medical\u00a0record 123456",
+        "prefixNPI: 1234567893",
+        "NPI: 1234567893X",
         "member id: confused",
         "health plan id confused",
         "policy id: alphabetic",
