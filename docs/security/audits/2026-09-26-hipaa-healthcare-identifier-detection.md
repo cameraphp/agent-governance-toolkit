@@ -1,7 +1,7 @@
 ---
 title: "Security audit: HIPAA healthcare identifier detection"
 last_reviewed: 2026-09-26
-owner: cameraphp
+owner: agt-maintainers
 ---
 
 # Security Audit: HIPAA Healthcare Identifier Detection

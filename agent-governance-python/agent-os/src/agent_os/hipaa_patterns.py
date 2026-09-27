@@ -87,7 +87,7 @@ HIPAA_PHI_RAW_PATTERNS = (
     (
         "Health Plan ID",
         _build_contextual_identifier_pattern(
-            r"hpid|health[\s_-]*plan|member[\s_-]*(?:id|identification)|policy[\s_-]*id",
+            r"hpid|health[\s_-]*plan(?:[\s_-]*id)?|member[\s_-]*(?:id|identification)|policy[\s_-]*id",
             8,
             15,
         ),
